@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arduino Pi Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: monospace;
+            background: #0f0f0f;
+            color: #00ff88;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+        h1 { font-size: 1.5rem; margin-bottom: 0.5rem; letter-spacing: 2px; }
+        #current-temp {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 1rem 0;
+        }
+        #status {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 2rem;
+        }
+        .chart-container {
+            width: 100%;
+            max-width: 800px;
+            background: #1a1a1a;
+            border: 1px solid #00ff8844;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>🌡 ARDUINO PI DASHBOARD</h1>
+    <div id="current-temp">--°C</div>
+    <div id="status">Waiting for data...</div>
+    <div class="chart-container">
+        <canvas id="tempChart"></canvas>
+    </div>
+
+    <script>
+        // Initialize the chart
+        const ctx = document.getElementById('tempChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Temperature (°C)',
+                    data: [],
+                    borderColor: '#00ff88',
+                    backgroundColor: '#00ff8822',
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    tension: 0.3  // Slight curve on the line
+                }]
+            },
+            options: {
+                responsive: true,
+                animation: false,  // Disable animation for smoother live updates
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: { color: '#888' },
+                        grid: { color: '#333' }
+                    },
+                    x: {
+                        ticks: { color: '#888', maxTicksLimit: 10 },
+                        grid: { color: '#333' }
+                    }
+                },
+                plugins: {
+                    legend: { labels: { color: '#00ff88' } }
+                }
+            }
+        });
+
+        // Fetch data from /data endpoint every 2 seconds
+        async function updateChart() {
+            try {
+                const response = await fetch('/data');
+                const readings = await response.json();
+
+                if (readings.length > 0) {
+                    // Update chart with all readings
+                    chart.data.labels = readings.map(r => r.time);
+                    chart.data.datasets[0].data = readings.map(r => r.temp);
+                    chart.update();
+
+                    // Update current temp display
+                    const latest = readings[readings.length - 1];
+                    document.getElementById('current-temp').textContent = latest.temp.toFixed(1) + '°C';
+                    document.getElementById('status').textContent =
+                        `Last update: ${latest.time} — ${readings.length} readings`;
+                }
+            } catch (err) {
+                document.getElementById('status').textContent = 'Error fetching data';
+            }
+        }
+
+        // Run immediately then every 2 seconds
+        updateChart();
+        setInterval(updateChart, 2000);
+    </script>
+</body>
+</html>
+
