@@ -26,7 +26,7 @@ def read_serial():
                     line = ser.readline().decode("utf-8", errors="replace").strip()
                     if line:
                         try:
-                            temp = float(line.split()[1])
+                            temp = float(line)
                             timestamp = time.strftime("%H:%M:%S")
                             with lock:
                                 readings.append({"time": timestamp, "temp": temp})
